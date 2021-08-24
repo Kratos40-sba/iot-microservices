@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0,
+maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <script src="https://cdn.plot.ly/plotly-2.3.0.min.js"></script>
+    <title>Home</title>
+</head>
+<body>
+<div id="chart" style="width:720px;height:360px;"></div>
+<div id="gauge"></div>
+</body>
+</html>
+<script>
+    let temp;
+    let hum ;
+    let soil ;
+
+    let socket = null
+    document.addEventListener("DOMContentLoaded",function () {
+        socket = new WebSocket("ws://127.0.0.1:5555/ws");
+        socket.onopen = () => {
+            console.log("Successfully connected")
+        }
+        socket.onclose = () => {
+            console.log("connection closed")
+        }
+        socket.onerror = error => {
+            console.log("there was an error")
+        }
+        socket.onmessage = msg => {
+            let data = JSON.parse(msg.data)
+            temp = parseFloat(data.temperature)
+            hum = parseFloat(data.humidity)
+            soil = parseInt(data.soil_percentage)
+
+            console.log(soil)
+        }
+
+        function getTemp() {
+            return temp
+        }
+
+        function getHum() {
+            return hum
+        }
+
+        function getSoil() {
+            return soil
+        }
+
+        //CHART = document.getElementById('chart');
+        let time = new Date();
+
+        let trace1 = {
+            x: [],
+            y: [],
+            mode: 'lines',
+            name: "Temperature",
+            line: {
+                color: '#80CAF6',
+                shape: 'spline'
+            }
+        }
+
+        let trace2 = {
+            x: [],
+            y: [],
+            xaxis: 'x2',
+            yaxis: 'y2',
+            mode: 'lines',
+            name: "Humidity",
+            line: {color: '#DF56F1'}
+        };
+
+        let layout = {
+            xaxis: {
+                type: 'date',
+                domain: [0, 1],
+                showticklabels: false
+            },
+            yaxis: {domain: [0.6, 1]},
+            xaxis2: {
+                type: 'date',
+                anchor: 'y2',
+                domain: [0, 1]
+            },
+            yaxis2: {
+                anchor: 'x2',
+                domain: [0, 0.4]
+            },
+        }
+        let gauge = [{
+            domain: {x: [0, 1], y: [0, 1]},
+            value: 0,
+            title: {text: "Soil-Moisture"},
+            type: "indicator",
+            mode: "gauge+number",
+            delta: {reference: 70},
+            gauge: {axis: {range: [null, 100]}}
+        }]
+        let layout2 = {width: 420, height: 360}
+        Plotly.newPlot('gauge', gauge, layout2);
+
+        let data = [trace1, trace2];
+
+        Plotly.newPlot('chart', data, layout);
+
+        let cnt = 0;
+
+        let interval = setInterval(function () {
+
+            let time = new Date();
+
+            let update = {
+                x: [[time], [time]],
+                y: [[getTemp()], [getHum()]]
+            }
+
+            Plotly.extendTraces('chart', update, [0, 1])
+
+            if (++cnt === 1000) clearInterval(interval);
+        }, 2000);
+        var cnt2 = 0;
+        var interval2 = setInterval(function () {
+            Plotly.update('gauge', {value: getSoil()}, {}, [0])
+            if (++cnt2 === 1000) clearInterval(interval2);
+        }, 2000);
+    })
+</script>
