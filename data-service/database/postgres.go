@@ -8,26 +8,27 @@ import (
 )
 
 var DB *gorm.DB
-func InitPostgres(dbName,dbUser , dbPort string) (*gorm.DB,error)  {
+
+func InitPostgres(hostName, dbName, dbUser, dbPort string) (*gorm.DB, error) {
 
 	db, err := gorm.Open(
 		postgres.New(
 			postgres.Config{
-				DSN: fmt.Sprintf("user=%s dbname=%s port=%s sslmode=disable", dbUser, dbName,dbPort)}), &gorm.Config{
+				DSN: fmt.Sprintf("host=%s user=%s dbname=%s port=%s sslmode=disable", hostName, dbUser, dbName, dbPort)}), &gorm.Config{
 			SkipDefaultTransaction: true,
 		})
 	if err != nil {
 		log.Println("Failed to connect to database!")
-		return nil , err
+		return nil, err
 	}
 	DB = db
 	/*
-	err = DB.AutoMigrate(&model.Event{})
-		if err != nil {
-			log.Fatalln("Error while migrating model : ",err)
-			return nil , err
-		}
-	 */
+		err = DB.AutoMigrate(&model.Event{})
+			if err != nil {
+				log.Fatalln("Error while migrating model : ",err)
+				return nil , err
+			}
+	*/
 
-	return DB , nil
+	return DB, nil
 }

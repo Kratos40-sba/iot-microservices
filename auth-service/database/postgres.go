@@ -8,13 +8,13 @@ import (
 
 var DB *gorm.DB
 
-func InitDB(userName , dbName , portDB string) (db *gorm.DB,err error)  {
-	dsn := fmt.Sprintf("user=%v dbname=%v port=%v sslmode=disable",userName,dbName,portDB)
-	DB , err = gorm.Open(postgres.New(postgres.Config{DSN: dsn}),
+func InitDB(hostName, userName, dbName, portDB string) (db *gorm.DB, err error) {
+	dsn := fmt.Sprintf("host=%s user=%v dbname=%v port=%v sslmode=disable", hostName, userName, dbName, portDB)
+	DB, err = gorm.Open(postgres.New(postgres.Config{DSN: dsn}),
 		&gorm.Config{SkipDefaultTransaction: true})
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
-	return DB,nil
+	return DB, nil
 }

@@ -15,50 +15,52 @@ import (
 )
 
 const (
-	HttpServer             = "HTTP_SERVER" // :8080
-	DbName                 = "POSTGRES_DB_NAME"
-	DbUser                 = "POSTGRES_USER_NAME"
-	DbPort                 = "POSTGRES_PORT" // 5432
-	MqttClientName         = "MQTT_CLINT_NAME"
-	MqttHost               = "MQTT_HOST" // 192.168.1.6
-	MqttPort               = "MQTT_PORT" // 1883
-	DhtTopic               = "esp/sensor"
-	_NotificationTopic     = "esp/notification"
+	HttpServer     = "HTTP_SERVER" // :8080
+	DbName         = "POSTGRES_DB_NAME"
+	DbUser         = "POSTGRES_USER_NAME"
+	DbPort         = "POSTGRES_PORT" // 5432
+	MqttClientName = "MQTT_CLINT_NAME"
+	MqttHost       = "MQTT_HOST" // 192.168.1.6
+	MqttPort       = "MQTT_PORT" // 1883
+	DhtTopic       = "esp/sensor"
+	HostName       = "POSTGRES_HOST"
 )
-func main()  {
-  // Load CONFIG from .env
-  err := config.LoadConfig()
-  if err != nil {
-    log.Fatalln("Error while loading config : ",err)
-  }
+
+func main() {
+	// Load CONFIG from .env
+	err := config.LoadConfig()
+	if err != nil {
+		log.Fatalln("Error while loading config : ", err)
+	}
 	router := gin.Default()
+	gin.SetMode(gin.ReleaseMode)
 	// setup DATABASE
-	db , err := database.InitPostgres(os.Getenv(DbName),os.Getenv(DbUser),os.Getenv(DbPort))
+	db, err := database.InitPostgres(os.Getenv(HostName), os.Getenv(DbName), os.Getenv(DbUser), os.Getenv(DbPort))
 	if err != nil {
 		log.Fatalln("err ", err)
 
 	}
 	err = db.AutoMigrate(&model.Event{})
 	if err != nil {
-		log.Fatalln("Error while migrating model : ",err)
+		log.Fatalln("Error while migrating model : ", err)
 
 	}
 	// setup MQTT CLIENT
-	mqttClient := service.NewMqttConnection(os.Getenv(MqttHost),os.Getenv(MqttPort),os.Getenv(MqttClientName))
+	mqttClient := service.NewMqttConnection(os.Getenv(MqttHost), os.Getenv(MqttPort), os.Getenv(MqttClientName))
 	mqttClient.Subscribe(DhtTopic)
 	// setup ROUTES
-	sensorAPI  := router.Group("/api/v1/data").Use(middleware.Authentication())
+	sensorAPI := router.Group("/api/v1/data").Use(middleware.Authentication())
 	{
 		sensorAPI.GET("/mqttHealth", controllers.Hello(mqttClient))
 		// todo get only 25% for performance
-		sensorAPI.GET("/all",controllers.GetAllEvents)
-		sensorAPI.GET("/last",controllers.GetLastEvents)
-		sensorAPI.GET("/byDate",controllers.GetEventByDate)
+		sensorAPI.GET("/all", controllers.GetAllEvents)
+		sensorAPI.GET("/last", controllers.GetLastEvents)
+		sensorAPI.GET("/byDate", controllers.GetEventByDate)
 		// todo add threshold controllers
 	}
 	router.NoRoute(func(context *gin.Context) {
-		context.JSON(http.StatusNotFound,gin.H{"Message":"No route for this url "})
+		context.JSON(http.StatusNotFound, gin.H{"Message": "No route for this url "})
 	})
-	log.Fatalln(router.Run(fmt.Sprintf(":%s",os.Getenv(HttpServer))))
+	log.Fatalln(router.Run(fmt.Sprintf(":%s", os.Getenv(HttpServer))))
 
 }

@@ -12,14 +12,16 @@ import (
 	"strings"
 	"time"
 )
+
 // WebSocket part
 type WsConnection struct {
 	*websocket.Conn
 }
+
 var eventChannel = make(chan model.Event)
 var up = websocket.Upgrader{
-	ReadBufferSize: 1024 ,
-	WriteBufferSize: 1024 ,
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},
@@ -33,7 +35,7 @@ func WsHandler(x *gin.Context) {
 		log.Println(err)
 	}
 	//var event model.Event
-    go func() {
+	go func() {
 		for {
 			select {
 			case event := <-eventChannel:
@@ -42,31 +44,37 @@ func WsHandler(x *gin.Context) {
 					//log.Println("here")
 					log.Println(err)
 				}
+			default:
+				//log.Println("missed")
 			}
 
 		}
 	}()
 
 }
-	// MQTT part
+
+// MQTT part
 const (
-	HostFormat     = "tcp://%s:%s"
-	QOS            = 1
+	HostFormat = "tcp://%s:%s"
+	QOS        = 1
 )
+
 var (
-	connectionHandler mqtt.OnConnectHandler =func(client mqtt.Client) {
-		log.Println("Client is connected")}
+	connectionHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
+		log.Println("Client is connected")
+	}
 	connectionLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err error) {
 		log.Println("Connection of Client lost caused by Error  : ", err)
 	}
-
 )
+
 type MqttConnection struct {
 	mqttClient mqtt.Client
 }
-func NewMqttConnection (host , port , clientName string) (mqttConnection *MqttConnection)  {
+
+func NewMqttConnection(host, port, clientName string) (mqttConnection *MqttConnection) {
 	options := mqtt.NewClientOptions()
-	options.AddBroker(fmt.Sprintf(HostFormat,host,port))
+	options.AddBroker(fmt.Sprintf(HostFormat, host, port))
 	options.SetClientID(clientName)
 	options.AutoReconnect = true
 	options.OnConnect = connectionHandler
@@ -76,7 +84,7 @@ func NewMqttConnection (host , port , clientName string) (mqttConnection *MqttCo
 		log.Fatalln("Connection Problem :", token.Error())
 	}
 	mqttConnection = &MqttConnection{client}
-	return  mqttConnection
+	return mqttConnection
 }
 
 // IsClientConnected for the hello API
@@ -88,11 +96,11 @@ func (conn *MqttConnection) IsClientConnected() bool {
 	return connected
 }
 func parseDhtMessage(msg mqtt.Message) model.Event {
-	event := model.Event{Time: time.Now() }
+	event := model.Event{Time: time.Now()}
 	p := strings.Split(string(msg.Payload()), "||")
 	event.Temp, _ = strconv.ParseFloat(p[0], 32)
-	event.Hum,  _ = strconv.ParseFloat(p[1], 32)
-	event.Soil, _ = strconv.ParseFloat(p[2],32)
+	event.Hum, _ = strconv.ParseFloat(p[1], 32)
+	event.Soil, _ = strconv.ParseFloat(p[2], 32)
 	return event
 
 }
@@ -102,16 +110,16 @@ func (conn *MqttConnection) Subscribe(topic string) {
 	log.Println("Subscribed to topic : ", topic)
 }
 
-func onMessageReceived() func(client mqtt.Client,msg mqtt.Message) {
-	return func(client mqtt.Client ,msg mqtt.Message) {
+func onMessageReceived() func(client mqtt.Client, msg mqtt.Message) {
+	return func(client mqtt.Client, msg mqtt.Message) {
 		switch msg.Topic() {
 		case "esp/sensor":
-				e:=  parseDhtMessage(msg)
-				// blocking instruction
-				go func() {eventChannel <- e}()
-				//log.Println(e)
+			e := parseDhtMessage(msg)
+			// blocking instruction
+			go func() { eventChannel <- e }()
+			//log.Println(e)
 		default:
-			log.Println("This topic is unknown : ",msg.Topic())
+			log.Println("This topic is unknown : ", msg.Topic())
 		}
 	}
 }

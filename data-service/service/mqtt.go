@@ -12,25 +12,26 @@ import (
 )
 
 const (
-	HostFormat     = "tcp://%s:%s"
-	QOS            = 1
+	HostFormat = "tcp://%s:%s"
+	QOS        = 1
 )
-var (
 
-	connectionHandler mqtt.OnConnectHandler =func(client mqtt.Client) {
-		log.Println("Client is connected")}
+var (
+	connectionHandler mqtt.OnConnectHandler = func(client mqtt.Client) {
+		log.Println("Client is connected")
+	}
 	connectionLostHandler mqtt.ConnectionLostHandler = func(client mqtt.Client, err error) {
 		log.Println("Connection of Client lost caused by Error  : ", err)
 	}
-
 )
+
 type MqttConnection struct {
 	mqttClient mqtt.Client
 }
 
-func NewMqttConnection (host , port , clientName string) (mqttConnection *MqttConnection)  {
+func NewMqttConnection(host, port, clientName string) (mqttConnection *MqttConnection) {
 	options := mqtt.NewClientOptions()
-	options.AddBroker(fmt.Sprintf(HostFormat,host,port))
+	options.AddBroker(fmt.Sprintf(HostFormat, host, port))
 	options.SetClientID(clientName)
 	options.AutoReconnect = true
 	//options.WillEnabled =true
@@ -41,7 +42,7 @@ func NewMqttConnection (host , port , clientName string) (mqttConnection *MqttCo
 		log.Fatalln("Connection Problem :", token.Error())
 	}
 	mqttConnection = &MqttConnection{client}
-	return  mqttConnection
+	return mqttConnection
 }
 
 // IsClientConnected for the hello API
@@ -52,32 +53,31 @@ func (conn *MqttConnection) IsClientConnected() bool {
 	}
 	return connected
 }
+
 // onMessageReceived  handle message when comes to the client from broker
-func onMessageReceived() func(client mqtt.Client , msg mqtt.Message) {
+func onMessageReceived() func(client mqtt.Client, msg mqtt.Message) {
 	return func(client mqtt.Client, msg mqtt.Message) {
 		switch msg.Topic() {
 		case "esp/sensor":
 			// get temp and humidity and insert in db table dht
 			// add mutex
-			handleDhtMessage(client ,msg)
+			handleDhtMessage(client, msg)
 			// service.Process(msg)
 			// do some commands
 		case "esp/rfid":
 		// forward/publish  the message to the authentication service
-		default :
+		default:
 			log.Println("Client is not subscribed to this Topic : ", msg.Topic())
 
 		}
 	}
 }
-func handleDhtMessage(client mqtt.Client , msg mqtt.Message)  {
-
-	event := model.Event{Time: time.Now().Format("15:04:05") , Date: time.Now().Format("2006-01-02" ) }
+func handleDhtMessage(client mqtt.Client, msg mqtt.Message) {
+	event := model.Event{Time: time.Now().Format("15:04:05"), Date: time.Now().Format("2006-01-02")}
 	p := strings.Split(string(msg.Payload()), "||")
 	event.Temperature, _ = strconv.ParseFloat(p[0], 32)
 	event.Humidity, _ = strconv.ParseFloat(p[1], 32)
-	event.SoilMoisture , _ = strconv.ParseFloat(p[2],32)
-	log.Println(event)
+	event.SoilMoisture, _ = strconv.ParseFloat(p[2], 32)
 	database.DB.Create(event)
 }
 func (conn *MqttConnection) Subscribe(topic string) {

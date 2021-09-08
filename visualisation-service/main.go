@@ -9,32 +9,33 @@ import (
 	"log"
 	"os"
 )
+
 var msg mqtt.Message
 
-const  (
-	HttpServer             = "HTTP_SERVER" // :9292
-	MqttClientName         = "MQTT_CLINT_NAME"
-	MqttHost               = "MQTT_HOST" // 192.168.1.6
-	MqttPort               = "MQTT_PORT" // 1883
-	DhtTopic               = "esp/sensor"
-
+const (
+	HttpServer     = "HTTP_SERVER" // :9292
+	MqttClientName = "MQTT_CLINT_NAME"
+	MqttHost       = "MQTT_HOST" // 192.168.1.6
+	MqttPort       = "MQTT_PORT" // 1883
+	DhtTopic       = "esp/sensor"
 )
-func main()  {
+
+func main() {
 	err := config.LoadConfig()
 	if err != nil {
 		log.Fatalln(err)
 	}
-    router := gin.Default()
+	router := gin.Default()
+	gin.SetMode(gin.ReleaseMode)
+	mqttClient := controllers.NewMqttConnection(os.Getenv(MqttHost), os.Getenv(MqttPort), os.Getenv(MqttClientName))
 
-    mqttClient := controllers.NewMqttConnection(os.Getenv(MqttHost),os.Getenv(MqttPort),os.Getenv(MqttClientName))
+	mqttClient.Subscribe(DhtTopic)
+	router.GET("/ws", controllers.WsHandler)
 
-    mqttClient.Subscribe(DhtTopic)
-	router.GET("/ws",controllers.WsHandler)
-
-    visualisationAPI :=router.Group("/api/v1/visual")
+	visualisationAPI := router.Group("/api/v1/visual")
 	{
 		visualisationAPI.GET("/", controllers.Home)
 	}
-   log.Fatalln(router.Run(fmt.Sprintf(":%s",os.Getenv(HttpServer))))
+	log.Fatalln(router.Run(fmt.Sprintf(":%s", os.Getenv(HttpServer))))
 
 }

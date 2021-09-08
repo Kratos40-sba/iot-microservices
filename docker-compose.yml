@@ -1,0 +1,45 @@
+version: '3'
+services:
+  auth-service :
+    build: ./auth-service
+    restart: unless-stopped
+    expose:
+      - "9090"
+    network_mode: "host"
+  command-service :
+     build: ./command-service
+     restart: unless-stopped
+     expose:
+       - "7070"
+     network_mode: "host"
+  data-service :
+    build: ./data-service
+    restart: unless-stopped
+    expose:
+      - "8181"
+    network_mode: "host"
+  visualisation-service :
+    build: ./visualisation-service
+    restart: unless-stopped
+    expose:
+      - "5555"
+    network_mode: "host"
+  broker :
+    image: eclipse-mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    expose:
+      - "1883"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config:rw
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+  gateway :
+    image: nginx
+    restart: always
+    expose:
+      - "80"
+    network_mode: "host"
+    volumes:
+      - ./nginx/:/etc/nginx/conf.d/
