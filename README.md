@@ -1,2 +1,1 @@
-# iot-microservices
-Microservices based iot project 
+# Microservices based iot project 
